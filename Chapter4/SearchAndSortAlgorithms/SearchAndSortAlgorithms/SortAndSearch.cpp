@@ -89,6 +89,10 @@ void FillArray(int fill[], int size)
 	}
 }
 
+//note: if a heuristic is added, an estimated cost needs to be added to the alg and then the priority queue
+//      would be ordered by the lowest estimated guess first. This would be used to choose the next visited 
+//      node.
+
 int AStarSearch(char src, char dest, vector<edge> edges)
 {
 	priority_queue<char,vector<char>,greater<char>> open; //contains visited places
