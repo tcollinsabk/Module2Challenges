@@ -24,17 +24,20 @@ constexpr int kUpArrow = 72;
 constexpr int kDownArrow = 80;
 constexpr int kEscapeKey = 27;
 
+thread* InputThread;
+
 GameplayState::GameplayState(StateMachineExampleGame* pOwner)
 	: m_pOwner(pOwner)
 	, m_beatLevel(false)
 	, m_skipFrameCount(0)
-	, m_currentLevel(3)
+	, m_currentLevel(0)
 	, m_pLevel(nullptr)
 {
 	m_LevelNames.push_back("Level1.txt");
 	m_LevelNames.push_back("Level2.txt");
 	m_LevelNames.push_back("Level3.txt");
 	m_LevelNames.push_back("Level6.txt");
+
 }
 
 GameplayState::~GameplayState()
@@ -60,62 +63,65 @@ bool GameplayState::Load()
 void GameplayState::Enter()
 {
 	Load();
+	InputThread = new thread(&GameplayState::ProcessInput, this);
+	//InputThread->join();
 }
 
-bool GameplayState::Update(bool processInput)
+void GameplayState::ProcessInput()
 {
-	if (processInput && !m_beatLevel)
+	bool input = _kbhit();
+	int arrowInput = 0;
+	int newPlayerX = m_player.GetXPosition();
+	int newPlayerY = m_player.GetYPosition();
+
+	// One of the arrow keys were pressed
+	if (input)
 	{
-		int input = _getch();
-		int arrowInput = 0;
-		int newPlayerX = m_player.GetXPosition();
-		int newPlayerY = m_player.GetYPosition();
-
-		// One of the arrow keys were pressed
-		if (input == kArrowInput)
-		{
-			arrowInput = _getch();
-		}
-
-		if ((input == kArrowInput && arrowInput == kLeftArrow) ||
-			(char)input == 'A' || (char)input == 'a')
-		{
-			newPlayerX--;
-		}
-		else if ((input == kArrowInput && arrowInput == kRightArrow) ||
-			(char)input == 'D' || (char)input == 'd')
-		{
-			newPlayerX++;
-		}
-		else if ((input == kArrowInput && arrowInput == kUpArrow) ||
-			(char)input == 'W' || (char)input == 'w')
-		{
-			newPlayerY--;
-		}
-		else if ((input == kArrowInput && arrowInput == kDownArrow) ||
-			(char)input == 'S' || (char)input == 's')
-		{
-			newPlayerY++;
-		}
-		else if (input == kEscapeKey)
-		{
-			m_pOwner->LoadScene(StateMachineExampleGame::SceneName::MainMenu);
-		}
-		else if ((char)input == 'Z' || (char)input == 'z')
-		{
-			m_player.DropKey();
-		}
-
-		// If position never changed
-		if (newPlayerX == m_player.GetXPosition() && newPlayerY == m_player.GetYPosition())
-		{
-			//return false;
-		}
-		else
-		{
-			HandleCollision(newPlayerX, newPlayerY);
-		}
+		arrowInput = _getch();
 	}
+
+	if ((input && arrowInput == kLeftArrow) ||
+		(char)arrowInput == 'A' || (char)arrowInput == 'a')
+	{
+		newPlayerX--;
+	}
+	else if ((input && arrowInput == kRightArrow) ||
+		(char)arrowInput == 'D' || (char)arrowInput == 'd')
+	{
+		newPlayerX++;
+	}
+	else if ((input && arrowInput == kUpArrow) ||
+		(char)arrowInput == 'W' || (char)arrowInput == 'w')
+	{
+		newPlayerY--;
+	}
+	else if ((input && arrowInput == kDownArrow) ||
+		(char)arrowInput == 'S' || (char)arrowInput == 's')
+	{
+		newPlayerY++;
+	}
+	else if (arrowInput == kEscapeKey)
+	{
+		m_pOwner->LoadScene(StateMachineExampleGame::SceneName::MainMenu);
+	}
+	else if ((char)arrowInput == 'Z' || (char)arrowInput == 'z')
+	{
+		m_player.DropKey();
+	}
+
+	// If position never changed
+	//if (newPlayerX == m_player.GetXPosition() && newPlayerY == m_player.GetYPosition())
+	//{
+		//return false;
+	//}
+	//else
+	//{
+		HandleCollision(newPlayerX, newPlayerY);
+	//}
+}
+
+void GameplayState::CheckBeatLevel()
+{
 	if (m_beatLevel)
 	{
 		++m_skipFrameCount;
@@ -129,7 +135,7 @@ bool GameplayState::Update(bool processInput)
 				Utility::WriteHighScore(m_player.GetMoney());
 
 				AudioManager::GetInstance()->PlayWinSound();
-				
+
 				m_pOwner->LoadScene(StateMachineExampleGame::SceneName::Win);
 			}
 			else
@@ -137,17 +143,30 @@ bool GameplayState::Update(bool processInput)
 				// On to the next level
 				Load();
 			}
-
 		}
 	}
+}
+
+//TODO: Refactor
+bool GameplayState::Update(bool processInput)
+{
+	//TODO: write a funciton to handle input
+	if (processInput && !m_beatLevel)
+	{
+		ProcessInput();
+	}
+	//TODO: Create a function that handles below
+	CheckBeatLevel();
 
 	return false;
 }
 
+//TODO: Refactor
 void GameplayState::HandleCollision(int newPlayerX, int newPlayerY)
 {
+	//Update Actors also does collision detection
 	PlacableActor* collidedActor = m_pLevel->UpdateActors(newPlayerX, newPlayerY);
-	if (collidedActor != nullptr && collidedActor->IsActive())
+	if (collidedActor != nullptr)
 	{
 		switch (collidedActor->GetType())
 		{

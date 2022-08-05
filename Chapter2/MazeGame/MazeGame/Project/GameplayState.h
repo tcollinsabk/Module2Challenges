@@ -6,13 +6,13 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <thread>
 
 class StateMachineExampleGame;
 
 class GameplayState : public GameState
 {
 	StateMachineExampleGame* m_pOwner;
-	
 	Player m_player;
 	Level* m_pLevel;
 
@@ -31,6 +31,9 @@ public:
 	virtual void Enter() override;
 	virtual bool Update(bool processInput = true) override;
 	virtual void Draw() override;
+protected:
+	void ProcessInput() override;
+	void CheckBeatLevel();
 
 private:
 	void HandleCollision(int newPlayerX, int newPlayerY);
